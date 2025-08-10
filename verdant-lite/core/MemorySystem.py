@@ -28,10 +28,33 @@ class MemorySystem:
                     self.connect_thoughts(new_label, thought)
 
     def connect_thoughts(self, label1, label2, weight=None):
+        """Create or update a weighted link between two thoughts.
+
+        Prevents duplicate connection entries within ``memory_store`` by
+        updating the weight if the connection already exists. This keeps the
+        cognitive graph consistent with the underlying NetworkX structure.
+        """
+
+        if label1 not in self.memory_store or label2 not in self.memory_store:
+            raise KeyError("Both thoughts must exist before they can be connected.")
+
         if weight is None:
-            weight = self.memory_store[label1]["stability"] * self.memory_store[label2]["stability"]
-        self.memory_store[label1]["connections"].append((label2, weight))
-        self.memory_store[label2]["connections"].append((label1, weight))
+            weight = (
+                self.memory_store[label1]["stability"]
+                * self.memory_store[label2]["stability"]
+            )
+
+        def update_connection(src, dst):
+            connections = self.memory_store[src]["connections"]
+            for idx, (label, _) in enumerate(connections):
+                if label == dst:
+                    connections[idx] = (dst, weight)
+                    break
+            else:
+                connections.append((dst, weight))
+
+        update_connection(label1, label2)
+        update_connection(label2, label1)
         self.graph.add_edge(label1, label2, weight=weight)
 
     def retrieve_related_thoughts(self, label):
